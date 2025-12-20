@@ -1,65 +1,129 @@
-import Image from "next/image";
+"use client";
+
+import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import ProductCard from './components/ProductCard';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+  const [products, setProducts] = useState<any[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('All Products');
+  const [loading, setLoading] = useState(true);
+
+  // Categories list
+  const categories = [
+    'All Products',
+    'Fruits',
+    'Vegetables',
+    'Dairy',
+    'Snacks',
+    'Beverages',
+    'Bakery',
+    'Pantry'
+  ];
+
+  // Fetch products on mount
+  useEffect(() => {
+    async function fetchProducts() {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*');
+
+      if (error) {
+        console.error('Error fetching products:', error);
+      } else {
+        setProducts(data || []);
+        setFilteredProducts(data || []);
+      }
+      setLoading(false);
+    }
+
+    fetchProducts();
+  }, []);
+
+  // Filter products when category changes (case-insensitive)
+  useEffect(() => {
+    if (selectedCategory === 'All Products') {
+      setFilteredProducts(products);
+    } else {
+      const filtered = products.filter(
+        (product) => 
+          product.category && 
+          product.category.toLowerCase() === selectedCategory.toLowerCase()
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [selectedCategory, products]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50">
+        <header className="site-header">
+          <div className="header-content">
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--primary)' }}>
+              Campus Market
+            </h1>
+          </div>
+        </header>
+        <div className="container text-center" style={{ paddingTop: '4rem' }}>
+          <p>Loading products...</p>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="site-header">
+        <div className="header-content">
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--primary)' }}>
+            Campus Market
+          </h1>
+          
+          <Link href="/cart" className="btn btn-primary">
+            🛒 Go to Cart
+          </Link>
+        </div>
+      </header>
+
+      {/* Category Pills Section */}
+      <div className="category-pills">
+        {categories.map((category) => (
+          <button
+            key={category}
+            onClick={() => setSelectedCategory(category)}
+            className={`category-pill ${
+              selectedCategory === category ? 'active' : ''
+            }`}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      {/* Products Grid */}
+      <div className="product-grid">
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))
+        ) : (
+          <div style={{ 
+            gridColumn: '1 / -1', 
+            textAlign: 'center', 
+            padding: '4rem 2rem',
+            color: 'var(--text-secondary)'
+          }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+              No products in this category
+            </h3>
+            <p>Try selecting a different category</p>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
